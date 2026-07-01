@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from typing import List, Optional
 
 from apptap.about import __version__
 from apptap.constants import DEFAULT_NFLOG_GROUP
@@ -51,18 +50,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     breadth = p.add_mutually_exclusive_group()
-    breadth.add_argument(
-        "--strict", action="store_true", help="Scope to the app's base UID only."
-    )
+    breadth.add_argument("--strict", action="store_true", help="Scope to the app's base UID only.")
     breadth.add_argument(
         "--no-dns",
         action="store_true",
         help="Include isolated/WebView child UIDs but not the DNS resolver UID.",
     )
 
-    p.add_argument(
-        "--nflog-group", type=int, default=DEFAULT_NFLOG_GROUP, metavar="N", help="NFLOG group (Tier 2)."
-    )
+    p.add_argument("--nflog-group", type=int, default=DEFAULT_NFLOG_GROUP, metavar="N", help="NFLOG group (Tier 2).")
     p.add_argument("-d", "--duration", type=float, metavar="SECS", help="Capture for N seconds then stop.")
     p.add_argument("--probe", action="store_true", help="Report kernel capabilities + chosen tier, then exit.")
     p.add_argument("--cleanup", action="store_true", help="Remove any leftover AppTap netfilter rules, then exit.")
@@ -106,7 +101,7 @@ def _breadth_from_args(args) -> Breadth:
     return Breadth.APP_ISOLATED_DNS
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     _setup_logging(args.verbose)

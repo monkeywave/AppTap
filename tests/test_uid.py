@@ -8,8 +8,6 @@ device, root, or ADB required.
 
 from __future__ import annotations
 
-from typing import Dict, Optional
-
 from apptap.executors.base import CmdResult
 from apptap.targets import Breadth, Target
 from apptap.uid import (
@@ -75,7 +73,7 @@ class FakeExecutor:
     the full command line. Unmatched commands return a non-zero CmdResult.
     """
 
-    def __init__(self, responses: Dict[str, CmdResult], platform: str = "android"):
+    def __init__(self, responses: dict[str, CmdResult], platform: str = "android"):
         self.responses = responses
         self._platform = platform
         self.calls: list = []
@@ -88,7 +86,7 @@ class FakeExecutor:
     def is_rooted(self) -> bool:
         return True
 
-    def shell(self, *args: str, background: bool = False, timeout: Optional[float] = None):
+    def shell(self, *args: str, background: bool = False, timeout: float | None = None):
         cmd = " ".join(args)
         self.calls.append(cmd)
         if cmd in self.responses:
@@ -98,7 +96,7 @@ class FakeExecutor:
                 return result
         return CmdResult(returncode=1, stderr="not found")
 
-    def run(self, *args: str, timeout: Optional[float] = None) -> CmdResult:
+    def run(self, *args: str, timeout: float | None = None) -> CmdResult:
         return self.shell(*args)
 
     def push_file(self, local: str, remote: str) -> CmdResult:  # pragma: no cover

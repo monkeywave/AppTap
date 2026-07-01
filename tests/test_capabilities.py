@@ -7,8 +7,6 @@ it ran, and exposes ``platform``/``is_rooted`` attributes. No device, no root.
 
 from __future__ import annotations
 
-from typing import Dict, List
-
 from apptap.capabilities import (
     Capabilities,
     android_version_note,
@@ -32,7 +30,7 @@ class FakeExecutor:
         self._default = default if default is not None else CmdResult(1, "", "")
         self.platform = platform
         self.is_rooted = is_rooted
-        self.commands: List[List[str]] = []
+        self.commands: list[list[str]] = []
 
     def shell(self, *args, background=False, timeout=None):
         self.commands.append(list(args))
@@ -43,13 +41,13 @@ class FakeExecutor:
         return self._default
 
     @property
-    def joined_commands(self) -> List[str]:
+    def joined_commands(self) -> list[str]:
         return [" ".join(c) for c in self.commands]
 
 
 def make_caps(**overrides) -> Capabilities:
     """An all-True Capabilities, overridable per field."""
-    defaults: Dict[str, object] = dict(
+    defaults: dict[str, object] = dict(
         owner=True,
         connmark=True,
         nflog_target=True,

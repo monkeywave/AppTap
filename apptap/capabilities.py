@@ -20,8 +20,8 @@ plus human-readable warnings.
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
 from .constants import DEFAULT_NFLOG_GROUP, NFNETLINK_LOG_PROC
 from .netfilter import build_probe, parse_iptables_backend, probe_feature_present
@@ -43,7 +43,7 @@ class Capabilities:
     nfnetlink_log: bool
     ip6tables: bool
     backend: str
-    sdk: Optional[int]
+    sdk: int | None
     is_rooted: bool
 
     @property
@@ -53,13 +53,7 @@ class Capabilities:
         Requires the owner match, the CONNMARK target, the NFLOG target, the
         ``nfnetlink_log`` delivery module, *and* root (the rules need it).
         """
-        return (
-            self.owner
-            and self.connmark
-            and self.nflog_target
-            and self.nfnetlink_log
-            and self.is_rooted
-        )
+        return self.owner and self.connmark and self.nflog_target and self.nfnetlink_log and self.is_rooted
 
 
 def _nfnetlink_log_present(executor) -> bool:
@@ -104,16 +98,12 @@ def probe(executor, group: int = DEFAULT_NFLOG_GROUP) -> Capabilities:
     finally:
         # Always remove the probe chain, whatever happened above.
         for argv in probe_cmds["teardown"]:
-            try:
+            with contextlib.suppress(Exception):  # teardown must never raise
                 executor.shell(*argv)
-            except Exception:  # pragma: no cover - teardown must never raise
-                pass
 
     nfnetlink_log = _nfnetlink_log_present(executor)
     ip6tables = executor.shell("ip6tables", "--version").ok
-    backend = parse_iptables_backend(
-        executor.shell("iptables", "--version").stdout
-    )
+    backend = parse_iptables_backend(executor.shell("iptables", "--version").stdout)
     sdk = get_android_sdk(executor) if executor.platform == "android" else None
 
     return Capabilities(
@@ -146,7 +136,7 @@ def _missing_reason(caps: Capabilities) -> str:
     return "an unknown prerequisite is missing"
 
 
-def select_tier(caps: Capabilities, requested: Tier) -> Tuple[Tier, List[str]]:
+def select_tier(caps: Capabilities, requested: Tier) -> tuple[Tier, list[str]]:
     """Resolve the requested tier against actual capabilities.
 
     Never returns :attr:`~apptap.targets.Tier.WHOLE_DEVICE` — that last-resort
@@ -164,16 +154,13 @@ def select_tier(caps: Capabilities, requested: Tier) -> Tuple[Tier, List[str]]:
         if caps.nflog_usable:
             return Tier.NFLOG, []
         reason = _missing_reason(caps)
-        return Tier.SOCKDIAG, [
-            f"NFLOG requested but unavailable ({reason}); "
-            "using Tier 1 (socket-table)"
-        ]
+        return Tier.SOCKDIAG, [f"NFLOG requested but unavailable ({reason}); using Tier 1 (socket-table)"]
 
     # Tier.AUTO: prefer NFLOG, fall back to the robust socket-table tier.
     if caps.nflog_usable:
         return Tier.NFLOG, []
 
-    warnings: List[str] = []
+    warnings: list[str] = []
     if caps.is_rooted and caps.owner and caps.connmark and caps.nflog_target and not caps.nfnetlink_log:
         # The common stock-GKI case: rules load but delivery is disabled.
         warnings.append(
@@ -184,7 +171,7 @@ def select_tier(caps: Capabilities, requested: Tier) -> Tuple[Tier, List[str]]:
     return Tier.SOCKDIAG, warnings
 
 
-def get_android_sdk(executor) -> Optional[int]:
+def get_android_sdk(executor) -> int | None:
     """Return ``ro.build.version.sdk`` as an int, or None on failure."""
     res = executor.shell("getprop", "ro.build.version.sdk")
     if not res.ok:
@@ -195,7 +182,7 @@ def get_android_sdk(executor) -> Optional[int]:
         return None
 
 
-def get_android_release(executor) -> Optional[str]:
+def get_android_release(executor) -> str | None:
     """Return ``ro.build.version.release`` (e.g. ``"14"``), or None on failure."""
     res = executor.shell("getprop", "ro.build.version.release")
     if not res.ok:
@@ -204,7 +191,7 @@ def get_android_release(executor) -> Optional[str]:
     return release or None
 
 
-def android_version_note(sdk: Optional[int]) -> Optional[str]:
+def android_version_note(sdk: int | None) -> str | None:
     """Advise about Tier-2 availability on newer Android, or None.
 
     The NFLOG delivery limitation is on *newer* Android (API 31+, stock GKI),

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass
-from typing import Optional
 
 
 class Tier(enum.Enum):
@@ -21,8 +20,8 @@ class Tier(enum.Enum):
     """
 
     AUTO = "auto"
-    NFLOG = "nflog"          # Tier 2: in-kernel owner+CONNMARK+NFLOG pre-filter
-    SOCKDIAG = "sockdiag"    # Tier 1: interface capture + socket-table UID filter
+    NFLOG = "nflog"  # Tier 2: in-kernel owner+CONNMARK+NFLOG pre-filter
+    SOCKDIAG = "sockdiag"  # Tier 1: interface capture + socket-table UID filter
     WHOLE_DEVICE = "whole_device"  # fallback only (result-only)
 
     def __str__(self) -> str:  # nicer CLI/log output
@@ -32,8 +31,8 @@ class Tier(enum.Enum):
 class Breadth(enum.Enum):
     """How many UIDs the capture is scoped to."""
 
-    APP_ONLY = "app"                       # base app UID only
-    APP_ISOLATED = "app+isolated"          # + isolated/WebView child UIDs
+    APP_ONLY = "app"  # base app UID only
+    APP_ISOLATED = "app+isolated"  # + isolated/WebView child UIDs
     APP_ISOLATED_DNS = "app+isolated+dns"  # + DNS resolver UID (default)
 
     def __str__(self) -> str:
@@ -49,8 +48,8 @@ class Target:
     restarts; ``pid`` is used on Linux or when the package isn't known.
     """
 
-    package: Optional[str] = None
-    pid: Optional[int] = None
+    package: str | None = None
+    pid: int | None = None
 
     def __post_init__(self) -> None:
         if not self.package and self.pid is None:

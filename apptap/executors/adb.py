@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import shlex
 import subprocess
-from typing import List, Optional, Union
 
 from apptap.executors.base import BackgroundProc, CmdResult
 
@@ -40,10 +39,10 @@ class AdbExecutor:
             scoped with ``-s <device_id>``.
     """
 
-    def __init__(self, device_id: Optional[str] = None) -> None:
+    def __init__(self, device_id: str | None = None) -> None:
         self.device_id = device_id
         # Lazily resolved elevation strategy; None means "not yet detected".
-        self._strategy: Optional[str] = None
+        self._strategy: str | None = None
 
     @property
     def platform(self) -> str:
@@ -51,7 +50,7 @@ class AdbExecutor:
         return "android"
 
     @property
-    def adb_base(self) -> List[str]:
+    def adb_base(self) -> list[str]:
         """The adb command prefix, optionally pinned to a device serial."""
         if self.device_id:
             return ["adb", "-s", self.device_id]
@@ -101,9 +100,7 @@ class AdbExecutor:
         # STRATEGY_ROOT and STRATEGY_NONE both run the command as-is.
         return cmd
 
-    def shell(
-        self, *args: str, background: bool = False, timeout: Optional[float] = None
-    ) -> Union[CmdResult, BackgroundProc]:
+    def shell(self, *args: str, background: bool = False, timeout: float | None = None) -> CmdResult | BackgroundProc:
         """Run a command on the device shell, with elevation applied.
 
         Args are quoted per-arg (so a tcpdump BPF or any arg containing spaces /
@@ -116,12 +113,10 @@ class AdbExecutor:
         elevated_cmd = self._elevator(cmd)
         argv = self.adb_base + ["shell", elevated_cmd]
         if background:
-            return subprocess.Popen(
-                argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-            )
+            return subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         return self._run(argv, timeout)
 
-    def run(self, *args: str, timeout: Optional[float] = None) -> CmdResult:
+    def run(self, *args: str, timeout: float | None = None) -> CmdResult:
         """Run an adb transport command (e.g. ``push``), without shell elevation."""
         return self._run_adb(list(args), timeout)
 
@@ -133,11 +128,11 @@ class AdbExecutor:
         """Copy a device file back to the host via ``adb pull``."""
         return self._run_adb(["pull", remote, local])
 
-    def _run_adb(self, args: List[str], timeout: Optional[float] = None) -> CmdResult:
+    def _run_adb(self, args: list[str], timeout: float | None = None) -> CmdResult:
         """Run ``adb [-s id] <args>`` and return its :class:`CmdResult`."""
         return self._run(self.adb_base + args, timeout)
 
-    def _run(self, argv: List[str], timeout: Optional[float]) -> CmdResult:
+    def _run(self, argv: list[str], timeout: float | None) -> CmdResult:
         """Execute ``argv`` to completion, capturing output as text."""
         effective_timeout = DEFAULT_TIMEOUT if timeout is None else timeout
         try:

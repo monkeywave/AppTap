@@ -14,7 +14,6 @@ functions so they can be unit-tested without a device.
 from __future__ import annotations
 
 import socket
-from typing import List, Set, Tuple
 
 from apptap.result import Connection
 
@@ -47,13 +46,11 @@ def _decode_ipv6(addr_hex: str) -> str:
     """
     if len(addr_hex) != 32:
         raise ValueError(f"bad IPv6 hex address: {addr_hex!r}")
-    packed = b"".join(
-        bytes.fromhex(addr_hex[i : i + 8])[::-1] for i in range(0, 32, 8)
-    )
+    packed = b"".join(bytes.fromhex(addr_hex[i : i + 8])[::-1] for i in range(0, 32, 8))
     return socket.inet_ntop(socket.AF_INET6, packed)
 
 
-def _decode_endpoint(token: str, family: int) -> Tuple[str, int]:
+def _decode_endpoint(token: str, family: int) -> tuple[str, int]:
     """Decode a ``HEXADDR:HEXPORT`` token into ``(addr, port)``."""
     addr_hex, _, port_hex = token.partition(":")
     if not port_hex:
@@ -63,9 +60,7 @@ def _decode_endpoint(token: str, family: int) -> Tuple[str, int]:
     return addr, port
 
 
-def parse_proc_net(
-    text: str, protocol: str, family: int
-) -> List[Tuple[Connection, int]]:
+def parse_proc_net(text: str, protocol: str, family: int) -> list[tuple[Connection, int]]:
     """Parse one ``/proc/net/{tcp,tcp6,udp,udp6}`` file.
 
     Args:
@@ -77,7 +72,7 @@ def parse_proc_net(
         A list of ``(Connection, uid)`` pairs, one per well-formed data row.
         Malformed or short lines are skipped silently.
     """
-    rows: List[Tuple[Connection, int]] = []
+    rows: list[tuple[Connection, int]] = []
     lines = text.splitlines()
     for line in lines[1:]:  # drop header
         fields = line.split()
@@ -101,9 +96,7 @@ def parse_proc_net(
     return rows
 
 
-def filter_conns_by_uid(
-    rows: List[Tuple[Connection, int]], uids: Set[int]
-) -> Set[Connection]:
+def filter_conns_by_uid(rows: list[tuple[Connection, int]], uids: set[int]) -> set[Connection]:
     """Keep only the connections whose owning UID is in ``uids``."""
     return {conn for conn, uid in rows if uid in uids}
 
@@ -117,14 +110,14 @@ _PROC_NET_SOURCES = (
 )
 
 
-def connections_for_uids(executor, uids: Set[int]) -> Set[Connection]:
+def connections_for_uids(executor, uids: set[int]) -> set[Connection]:
     """Read every ``/proc/net`` socket table and return the target's 5-tuples.
 
     Each of ``tcp``/``tcp6``/``udp``/``udp6`` is read via the executor and
     parsed; sockets owned by a UID in ``uids`` are collected into a de-duplicated
     set. Files that cannot be read (e.g. a device without ``udp6``) are ignored.
     """
-    conns: Set[Connection] = set()
+    conns: set[Connection] = set()
     for name, protocol, family in _PROC_NET_SOURCES:
         result = executor.shell("cat", f"/proc/net/{name}")
         if not getattr(result, "ok", False):

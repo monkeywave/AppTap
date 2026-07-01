@@ -21,7 +21,6 @@ from apptap.executors.adb import (
 )
 from apptap.executors.local import LocalExecutor
 
-
 # --------------------------------------------------------------------------- #
 # LocalExecutor
 # --------------------------------------------------------------------------- #

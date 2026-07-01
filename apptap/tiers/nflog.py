@@ -13,7 +13,6 @@ can fall back to Tier 1.
 from __future__ import annotations
 
 import os
-from typing import List, Optional
 
 from apptap.executors.base import BackgroundProc
 from apptap.netfilter import build_setup, build_teardown
@@ -37,11 +36,11 @@ class NflogTier(CaptureTier):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._proc: Optional[BackgroundProc] = None
+        self._proc: BackgroundProc | None = None
         self._installed = False
         self._tmp_pcap = self._host_tmp_pcap(self.output)
-        self._remote_pcap: Optional[str] = None
-        self._warnings: List[str] = []
+        self._remote_pcap: str | None = None
+        self._warnings: list[str] = []
 
     # --- lifecycle -----------------------------------------------------------
 
@@ -84,9 +83,7 @@ class NflogTier(CaptureTier):
         try:
             self._run_argvs(build_setup(uids, self.nflog_group, _IPT_V6))
         except Exception as exc:
-            self._warnings.append(
-                f"Tier 2 ip6tables setup failed; IPv6 traffic may be missing: {exc}"
-            )
+            self._warnings.append(f"Tier 2 ip6tables setup failed; IPv6 traffic may be missing: {exc}")
         self._installed = True
 
     def _start_capture(self) -> None:
@@ -125,8 +122,7 @@ class NflogTier(CaptureTier):
             size = 0
         if size == 0:
             self._warnings.append(
-                "Tier 2 produced no packets — kernel NFLOG delivery may be "
-                "unavailable; consider Tier 1"
+                "Tier 2 produced no packets — kernel NFLOG delivery may be unavailable; consider Tier 1"
             )
 
     # --- rule execution ------------------------------------------------------

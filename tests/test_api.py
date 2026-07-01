@@ -155,9 +155,7 @@ def test_version_note_surfaced(tmp_path, monkeypatch):
 
 def test_cleanup_invokes_teardown(monkeypatch):
     calls = []
-    monkeypatch.setattr(
-        "apptap.netfilter.build_teardown", lambda ipt="iptables": [["x", ipt]]
-    )
+    monkeypatch.setattr("apptap.netfilter.build_teardown", lambda ipt="iptables": [["x", ipt]])
     ex = FakeExecutor()
     ex.shell = lambda *a, **k: calls.append(a) or CmdResult(0)
     api.cleanup(ex)

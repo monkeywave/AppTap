@@ -9,7 +9,6 @@ filtering path is exercised only when scapy is importable.
 from __future__ import annotations
 
 import os
-import threading
 import time
 
 import pytest
@@ -24,7 +23,6 @@ from apptap.tiers.sockdiag import (
     connection_endpoints,
     packet_matches,
 )
-
 
 # --- fakes -------------------------------------------------------------------
 
@@ -58,11 +56,11 @@ class FakeExecutor:
 
     def __init__(self, platform="android", proc_net=None):
         self._platform = platform
-        self.commands = []          # list[tuple[str, ...]] of shell argv
+        self.commands = []  # list[tuple[str, ...]] of shell argv
         self.background_calls = []  # the argv of each background shell call
-        self.pulled = []            # list[(remote, local)]
-        self.pushed = []            # list[(local, remote)]
-        self.procs = []             # FakeProcs handed out
+        self.pulled = []  # list[(remote, local)]
+        self.pushed = []  # list[(local, remote)]
+        self.procs = []  # FakeProcs handed out
         self._proc_net = proc_net or {}
 
     # Executor protocol ----------------------------------------------------
@@ -113,9 +111,7 @@ TARGET = Target(package="com.example.app")
 
 def test_infra_bpf_excludes_all_infra_ports():
     bpf = _infra_bpf()
-    assert bpf == (
-        "not (tcp port 5037 or tcp port 5555 or tcp port 27042 or tcp port 27043)"
-    )
+    assert bpf == ("not (tcp port 5037 or tcp port 5555 or tcp port 27042 or tcp port 27043)")
 
 
 def test_host_tmp_pcap_beside_output():
@@ -149,9 +145,7 @@ def test_stop_remote_tcpdump_handles_missing_proc():
 
 
 def _conn(laddr, lport, raddr, rport, protocol="tcp", family=4):
-    return Connection(
-        protocol=protocol, family=family, laddr=laddr, lport=lport, raddr=raddr, rport=rport
-    )
+    return Connection(protocol=protocol, family=family, laddr=laddr, lport=lport, raddr=raddr, rport=rport)
 
 
 def test_connection_endpoints_includes_both_sides():
@@ -191,11 +185,15 @@ def test_packet_matches_false_when_neither_endpoint_known():
 # --- tier properties ---------------------------------------------------------
 
 
-def _mk_sockdiag(ex, output, uids={10123}):
+def _mk_sockdiag(ex, output, uids=None):
+    if uids is None:
+        uids = {10123}
     return SockDiagTier(ex, TARGET, uids, output, tcpdump_cmd="/data/local/tmp/tcpdump_arm64_android")
 
 
-def _mk_nflog(ex, output, uids={10123}):
+def _mk_nflog(ex, output, uids=None):
+    if uids is None:
+        uids = {10123}
     return NflogTier(ex, TARGET, uids, output, tcpdump_cmd="/data/local/tmp/tcpdump_arm64_android")
 
 
@@ -346,9 +344,7 @@ def test_sockdiag_stop_calls_helper_and_pull(tmp_path, monkeypatch):
     out = tmp_path / "out.pcap"
     tier = _mk_sockdiag(ex, str(out))
 
-    monkeypatch.setattr(
-        "apptap.tiers.sockdiag.connections_for_uids", lambda e, u: set()
-    )
+    monkeypatch.setattr("apptap.tiers.sockdiag.connections_for_uids", lambda e, u: set())
     # avoid the scapy path here; assert the stop plumbing only
     monkeypatch.setattr(SockDiagTier, "_filter_pcap", lambda self: None)
 
@@ -370,7 +366,7 @@ def test_sockdiag_filter_pcap_keeps_only_app_packets(tmp_path):
     """Exercise the real scapy filtering path with a tiny on-disk pcap."""
     pytest.importorskip("scapy")
     from scapy.layers.inet import IP, TCP, UDP
-    from scapy.utils import wrpcap, PcapReader
+    from scapy.utils import PcapReader, wrpcap
 
     app_pkt = IP(src="10.0.0.5", dst="93.184.216.34") / TCP(sport=41000, dport=443)
     app_reply = IP(src="93.184.216.34", dst="10.0.0.5") / TCP(sport=443, dport=41000)
@@ -379,7 +375,10 @@ def test_sockdiag_filter_pcap_keeps_only_app_packets(tmp_path):
     out = tmp_path / "out.pcap"
     ex = FakeExecutor(platform="linux")  # linux: temp pcap IS host-side
     tier = SockDiagTier(
-        ex, TARGET, {10123}, str(out),
+        ex,
+        TARGET,
+        {10123},
+        str(out),
         tcpdump_cmd="tcpdump",
     )
     # write a raw temp pcap where the tier expects it
@@ -401,7 +400,7 @@ def test_sockdiag_stop_warns_when_pcap_unreadable(tmp_path, monkeypatch):
     monkeypatch.setattr("apptap.tiers.sockdiag.connections_for_uids", lambda e, u: set())
 
     def boom(self):
-        raise IOError("no such pcap")
+        raise OSError("no such pcap")
 
     monkeypatch.setattr(SockDiagTier, "_filter_pcap", boom)
     tier.start()

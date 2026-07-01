@@ -12,9 +12,9 @@ the two concrete classes stay focused on their distinct capture strategy.
 
 from __future__ import annotations
 
+import contextlib
 import os
 from abc import ABC, abstractmethod
-from typing import List, Optional, Set
 
 from apptap.constants import DEFAULT_NFLOG_GROUP, DEVICE_TMP, INFRA_PORTS
 from apptap.executors.base import BackgroundProc, Executor
@@ -46,9 +46,7 @@ def _host_tmp_pcap(output: str) -> str:
     return os.path.join(directory, f"_{name}")
 
 
-def _stop_remote_tcpdump(
-    executor: Executor, proc: Optional[BackgroundProc], binname: str
-) -> None:
+def _stop_remote_tcpdump(executor: Executor, proc: BackgroundProc | None, binname: str) -> None:
     """Gracefully stop a running tcpdump, robust to it already being gone.
 
     On Android the tcpdump runs on-device, so terminating the local transport
@@ -64,28 +62,20 @@ def _stop_remote_tcpdump(
 
 def _stop_android_tcpdump(executor: Executor, binname: str) -> None:
     """Signal the on-device tcpdump to stop, SIGINT first then SIGKILL."""
-    try:
+    with contextlib.suppress(Exception):
         executor.shell("pkill", "-INT", "-f", binname)
-    except Exception:
-        pass
-    try:
+    with contextlib.suppress(Exception):
         executor.shell("pkill", "-9", "-f", binname)
-    except Exception:
-        pass
 
 
-def _terminate_proc(proc: Optional[BackgroundProc]) -> None:
+def _terminate_proc(proc: BackgroundProc | None) -> None:
     """Terminate then kill a background proc handle; ignore if already gone."""
     if proc is None:
         return
-    try:
+    with contextlib.suppress(Exception):
         proc.terminate()
-    except Exception:
-        pass
-    try:
+    with contextlib.suppress(Exception):
         proc.kill()
-    except Exception:
-        pass
 
 
 class CaptureTier(ABC):
@@ -106,7 +96,7 @@ class CaptureTier(ABC):
         self,
         executor: Executor,
         target: Target,
-        uids: Set[int],
+        uids: set[int],
         output: str,
         *,
         tcpdump_cmd: str,
@@ -115,7 +105,7 @@ class CaptureTier(ABC):
     ) -> None:
         self.executor = executor
         self.target = target
-        self.uids: Set[int] = set(uids)
+        self.uids: set[int] = set(uids)
         self.output = output
         self.tcpdump_cmd = tcpdump_cmd
         self.nflog_group = nflog_group
@@ -137,9 +127,12 @@ class CaptureTier(ABC):
         """Stop capturing, finalize the app-scoped pcap, and return the result."""
         raise NotImplementedError
 
-    def teardown(self) -> None:
-        """Idempotent cleanup of anything ``start`` installed. Never raises."""
-        # Default: nothing to clean up (Tier 1 installs no device state).
+    def teardown(self) -> None:  # noqa: B027  (intentional concrete no-op default)
+        """Idempotent cleanup of anything ``start`` installed. Never raises.
+
+        Concrete no-op by design: Tier 1 installs no device state, so it needs no
+        teardown; NflogTier overrides this to remove its netfilter rules.
+        """
 
     # --- shared helpers exposed to subclasses --------------------------------
 
@@ -152,9 +145,7 @@ class CaptureTier(ABC):
         return _host_tmp_pcap(output)
 
     @staticmethod
-    def _stop_remote_tcpdump(
-        executor: Executor, proc: Optional[BackgroundProc], binname: str
-    ) -> None:
+    def _stop_remote_tcpdump(executor: Executor, proc: BackgroundProc | None, binname: str) -> None:
         _stop_remote_tcpdump(executor, proc, binname)
 
     def _tcpdump_binname(self) -> str:
@@ -162,7 +153,7 @@ class CaptureTier(ABC):
         return os.path.basename(self.tcpdump_cmd.split()[0]) if self.tcpdump_cmd else "tcpdump"
 
 
-__all__: List[str] = [
+__all__: list[str] = [
     "CaptureTier",
     "_infra_bpf",
     "_host_tmp_pcap",

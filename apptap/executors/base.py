@@ -13,7 +13,7 @@ The Protocol mirrors friTap's ``ADB`` surface (``run``/``shell``/``push_file``/
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Protocol, Union, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @dataclass
@@ -37,8 +37,8 @@ class BackgroundProc(Protocol):
     Popen directly for ``shell(..., background=True)``.
     """
 
-    def poll(self) -> Optional[int]: ...
-    def wait(self, timeout: Optional[float] = None) -> int: ...
+    def poll(self) -> int | None: ...
+    def wait(self, timeout: float | None = None) -> int: ...
     def terminate(self) -> None: ...
     def kill(self) -> None: ...
 
@@ -53,13 +53,11 @@ class Executor(Protocol):
     (mirroring friTap's ``ADB.shell``).
     """
 
-    def run(self, *args: str, timeout: Optional[float] = None) -> CmdResult:
+    def run(self, *args: str, timeout: float | None = None) -> CmdResult:
         """Run a *transport* command (e.g. ``adb push``), without shell elevation."""
         ...
 
-    def shell(
-        self, *args: str, background: bool = False, timeout: Optional[float] = None
-    ) -> Union[CmdResult, BackgroundProc]:
+    def shell(self, *args: str, background: bool = False, timeout: float | None = None) -> CmdResult | BackgroundProc:
         """Run a command on the target shell, with elevation applied.
 
         Returns a :class:`CmdResult` normally, or a :class:`BackgroundProc` when

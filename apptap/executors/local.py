@@ -12,7 +12,6 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-from typing import List, Optional, Union
 
 from apptap.executors.base import BackgroundProc, CmdResult
 
@@ -42,15 +41,13 @@ class LocalExecutor:
         """True when the current process runs as uid 0."""
         return os.geteuid() == 0
 
-    def _elevate(self, argv: List[str]) -> List[str]:
+    def _elevate(self, argv: list[str]) -> list[str]:
         """Prefix ``argv`` with ``sudo -n`` when elevation is needed/wanted."""
         if self.use_sudo and not self.is_rooted:
             return ["sudo", "-n"] + argv
         return argv
 
-    def shell(
-        self, *args: str, background: bool = False, timeout: Optional[float] = None
-    ) -> Union[CmdResult, BackgroundProc]:
+    def shell(self, *args: str, background: bool = False, timeout: float | None = None) -> CmdResult | BackgroundProc:
         """Run a command on the local shell, elevating with ``sudo`` if needed.
 
         Args are joined into a single argument vector. With ``background=True``
@@ -60,16 +57,14 @@ class LocalExecutor:
         """
         argv = self._elevate(list(args))
         if background:
-            return subprocess.Popen(
-                argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-            )
+            return subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         return self._run(argv, timeout)
 
-    def run(self, *args: str, timeout: Optional[float] = None) -> CmdResult:
+    def run(self, *args: str, timeout: float | None = None) -> CmdResult:
         """Run a non-elevated local command and return its :class:`CmdResult`."""
         return self._run(list(args), timeout)
 
-    def _run(self, argv: List[str], timeout: Optional[float]) -> CmdResult:
+    def _run(self, argv: list[str], timeout: float | None) -> CmdResult:
         """Execute ``argv`` to completion, capturing output as text."""
         effective_timeout = DEFAULT_TIMEOUT if timeout is None else timeout
         try:

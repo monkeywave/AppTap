@@ -13,7 +13,6 @@ which Tier 2 relies on.
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from apptap.constants import DEVICE_TMP, TCPDUMP_ARCH_MAP
 
@@ -38,7 +37,7 @@ def assets_dir() -> str:
     return os.path.join(os.path.dirname(__file__), "assets", "tcpdump_binaries")
 
 
-def bundled_binary_path(arch: str) -> Optional[str]:
+def bundled_binary_path(arch: str) -> str | None:
     """Host path to the bundled tcpdump binary for an arch key, or None."""
     name = TCPDUMP_ARCH_MAP.get(arch)
     if not name:
@@ -56,11 +55,11 @@ class TcpdumpProvider:
         device_tmp: device-side scratch dir for the pushed binary (Android).
     """
 
-    def __init__(self, executor, override_path: Optional[str] = None, device_tmp: str = DEVICE_TMP):
+    def __init__(self, executor, override_path: str | None = None, device_tmp: str = DEVICE_TMP):
         self._executor = executor
         self._override = override_path
         self._device_tmp = device_tmp
-        self._resolved: Optional[str] = None
+        self._resolved: str | None = None
 
     def resolve(self) -> str:
         """Return the command string used to invoke tcpdump, installing if needed."""
@@ -75,8 +74,7 @@ class TcpdumpProvider:
         else:
             # Linux without a native tcpdump: nothing to install; surface clearly.
             raise RuntimeError(
-                "tcpdump not found on the host; install it (e.g. `apt install tcpdump`) "
-                "or pass an explicit path."
+                "tcpdump not found on the host; install it (e.g. `apt install tcpdump`) or pass an explicit path."
             )
         return self._resolved
 
@@ -89,7 +87,7 @@ class TcpdumpProvider:
             return False
         return getattr(res, "ok", False) or "tcpdump version" in (res.stdout + res.stderr).lower()
 
-    def _detect_android_arch(self) -> Optional[str]:
+    def _detect_android_arch(self) -> str | None:
         for cmd in (("getprop", "ro.product.cpu.abi"), ("uname", "-m")):
             try:
                 res = self._executor.shell(*cmd, timeout=8)

@@ -15,7 +15,6 @@ The module is split into two layers:
 from __future__ import annotations
 
 import re
-from typing import Optional, Set
 
 from .constants import AID_DNS, ISOLATED_UID_MAX, ISOLATED_UID_MIN
 from .executors.base import Executor
@@ -31,7 +30,7 @@ _PROC_STATUS_UID_RE = re.compile(r"^Uid:\s+(\d+)", re.MULTILINE)
 _DUMPSYS_USERID_RE = re.compile(r"\buserId=(\d+)")
 
 
-def parse_proc_status_uid(text: str) -> Optional[int]:
+def parse_proc_status_uid(text: str) -> int | None:
     """Return the *real* UID from ``/proc/<pid>/status`` text, or None.
 
     The relevant line looks like ``Uid:\\t<real>\\t<eff>\\t<saved>\\t<fs>``.
@@ -40,7 +39,7 @@ def parse_proc_status_uid(text: str) -> Optional[int]:
     return int(match.group(1)) if match else None
 
 
-def parse_dumpsys_userid(text: str) -> Optional[int]:
+def parse_dumpsys_userid(text: str) -> int | None:
     """Return the ``userId=<n>`` value from ``dumpsys package`` output, or None."""
     match = _DUMPSYS_USERID_RE.search(text)
     return int(match.group(1)) if match else None
@@ -57,7 +56,7 @@ def parse_pidof(text: str) -> list:
 # --- Resolvers ---------------------------------------------------------------
 
 
-def _read_status_uid(executor: Executor, pid: int) -> Optional[int]:
+def _read_status_uid(executor: Executor, pid: int) -> int | None:
     """Read ``/proc/<pid>/status`` and return its real UID, or None."""
     result = executor.shell("cat", f"/proc/{pid}/status")
     if not getattr(result, "ok", False):
@@ -65,7 +64,7 @@ def _read_status_uid(executor: Executor, pid: int) -> Optional[int]:
     return parse_proc_status_uid(result.stdout)
 
 
-def get_base_uid(executor: Executor, target: Target) -> Optional[int]:
+def get_base_uid(executor: Executor, target: Target) -> int | None:
     """Resolve the app's base (appId) UID, trying strategies in order.
 
     First success wins:
@@ -108,7 +107,7 @@ def get_base_uid(executor: Executor, target: Target) -> Optional[int]:
     return None
 
 
-def get_app_uids(executor: Executor, target: Target) -> Set[int]:
+def get_app_uids(executor: Executor, target: Target) -> set[int]:
     """Enumerate every UID belonging to the package, incl. isolated children.
 
     Approach (kept deliberately simple and robust):
@@ -131,7 +130,7 @@ def get_app_uids(executor: Executor, target: Target) -> Set[int]:
     UIDs collected. The returned set is the base UID plus any matching child
     UIDs; it may be just ``{base}`` when there are no children.
     """
-    uids: Set[int] = set()
+    uids: set[int] = set()
 
     base = get_base_uid(executor, target)
     if base is not None:
@@ -142,7 +141,7 @@ def get_app_uids(executor: Executor, target: Target) -> Set[int]:
         # Single shell loop: print the status block of every /proc entry whose
         # cmdline starts with the package name.
         script = (
-            'for d in /proc/[0-9]*; do '
+            "for d in /proc/[0-9]*; do "
             'c=$(cat "$d/cmdline" 2>/dev/null | tr "\\0" " "); '
             f'case "$c" in "{pkg}"*) cat "$d/status" 2>/dev/null;; esac; '
             "done"
@@ -163,9 +162,7 @@ def _is_isolated(uid: int) -> bool:
     return ISOLATED_UID_MIN <= uid <= ISOLATED_UID_MAX
 
 
-def resolve_uids(
-    executor: Executor, target: Target, breadth: Breadth
-) -> Set[int]:
+def resolve_uids(executor: Executor, target: Target, breadth: Breadth) -> set[int]:
     """Resolve the set of UIDs to scope capture to, at the given breadth.
 
     * ``APP_ONLY`` → ``{base_uid}``.

@@ -8,7 +8,6 @@ or decrypted data — only acquisition results.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from apptap.targets import Tier
 
@@ -23,7 +22,7 @@ class Connection:
     """
 
     protocol: str  # "tcp" | "udp"
-    family: int    # 4 | 6
+    family: int  # 4 | 6
     laddr: str
     lport: int
     raddr: str
@@ -57,6 +56,6 @@ class CaptureResult:
     tier: Tier
     uids: frozenset = frozenset()
     connections: tuple = ()
-    pcap_path: Optional[str] = None
-    linktype: Optional[int] = None
+    pcap_path: str | None = None
+    linktype: int | None = None
     warnings: list = field(default_factory=list)

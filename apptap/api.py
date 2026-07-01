@@ -15,9 +15,9 @@ Tier.WHOLE_DEVICE`` and a warning.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
-from typing import List, Optional
 
 from apptap import capabilities
 from apptap import uid as uid_module
@@ -54,7 +54,7 @@ class CaptureSession:
         breadth: Breadth = Breadth.APP_ISOLATED_DNS,
         tier: Tier = Tier.AUTO,
         nflog_group: int = DEFAULT_NFLOG_GROUP,
-        tcpdump_path: Optional[str] = None,
+        tcpdump_path: str | None = None,
     ) -> None:
         self.target = target
         self.executor = executor
@@ -64,17 +64,17 @@ class CaptureSession:
         self.nflog_group = nflog_group
         self.tcpdump_path = tcpdump_path
 
-        self.result: Optional[CaptureResult] = None
-        self._impl: Optional[CaptureTier] = None
-        self._warnings: List[str] = []
+        self.result: CaptureResult | None = None
+        self._impl: CaptureTier | None = None
+        self._warnings: list[str] = []
         self._uids: set = set()
-        self._chosen: Optional[Tier] = None
+        self._chosen: Tier | None = None
         self._whole_device = False
         self._started = False
 
     # --- lifecycle -----------------------------------------------------------
 
-    def start(self) -> "CaptureSession":
+    def start(self) -> CaptureSession:
         """Resolve UIDs, choose a tier, and begin capturing."""
         if self._started:
             raise RuntimeError("CaptureSession already started")
@@ -123,7 +123,7 @@ class CaptureSession:
             except Exception as exc:  # pragma: no cover - defensive
                 logger.debug("teardown error (ignored): %s", exc)
 
-    def __enter__(self) -> "CaptureSession":
+    def __enter__(self) -> CaptureSession:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> bool:
@@ -165,9 +165,7 @@ class CaptureSession:
             logger.debug("capability probe failed (%s); defaulting to Tier 1", exc)
             chosen = Tier.SOCKDIAG
         if not self._uids:
-            self._warnings.append(
-                "Could not resolve the app UID; capturing the whole device unfiltered."
-            )
+            self._warnings.append("Could not resolve the app UID; capturing the whole device unfiltered.")
             self._whole_device = True
             chosen = Tier.SOCKDIAG  # SockDiagTier copies through unfiltered when uids is empty
         return chosen
@@ -181,8 +179,8 @@ def capture(
     breadth: Breadth = Breadth.APP_ISOLATED_DNS,
     tier: Tier = Tier.AUTO,
     nflog_group: int = DEFAULT_NFLOG_GROUP,
-    duration: Optional[float] = None,
-    tcpdump_path: Optional[str] = None,
+    duration: float | None = None,
+    tcpdump_path: str | None = None,
 ) -> CaptureResult:
     """Capture an app's traffic in one call.
 
@@ -211,13 +209,11 @@ def cleanup(executor: Executor) -> None:
 
     for ipt in ("iptables", "ip6tables"):
         for argv in netfilter.build_teardown(ipt):
-            try:
+            with contextlib.suppress(Exception):
                 executor.shell(*argv)
-            except Exception:
-                pass
 
 
-def _block(duration: Optional[float]) -> None:
+def _block(duration: float | None) -> None:
     if duration is not None:
         time.sleep(duration)
         return

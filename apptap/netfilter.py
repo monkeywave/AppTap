@@ -37,8 +37,6 @@ touches a device, which is exactly what makes it fully unit-testable.
 
 from __future__ import annotations
 
-from typing import Dict, List
-
 from .constants import (
     CHAIN_LOG,
     CHAIN_MARK,
@@ -59,7 +57,7 @@ _XMARK = f"{hex(CONNMARK_BIT)}/{hex(CONNMARK_MASK)}"
 _MASK = hex(CONNMARK_MASK)
 
 
-def _base(ipt: str) -> List[str]:
+def _base(ipt: str) -> list[str]:
     """Common prefix for every rule: binary, lock-wait, and the mangle table.
 
     ``-w`` makes iptables block on the xtables lock instead of failing when
@@ -68,9 +66,7 @@ def _base(ipt: str) -> List[str]:
     return [ipt, "-w", "-t", NETFILTER_TABLE]
 
 
-def build_setup(
-    uids: List[int], group: int, ipt: str = "iptables"
-) -> List[List[str]]:
+def build_setup(uids: list[int], group: int, ipt: str = "iptables") -> list[list[str]]:
     """Build the argv lists that install the Tier-2 marking + logging rules.
 
     The owner match appears ONLY in the MARK chain (OUTPUT-only); the LOG chain
@@ -82,7 +78,7 @@ def build_setup(
     :param ipt: ``"iptables"`` or ``"ip6tables"``.
     :returns: ordered list of argv lists to run in sequence.
     """
-    cmds: List[List[str]] = []
+    cmds: list[list[str]] = []
 
     # Dedicated chains so teardown is a clean flush+delete of exactly what we
     # created, never editing the device's own chains.
@@ -112,9 +108,7 @@ def build_setup(
     # LOG chain: restore the connection's connmark into skb->mark, then log
     # anything carrying our bit. No owner match here — this is what lets the
     # ownerless inbound reply packets be logged.
-    cmds.append(
-        _base(ipt) + ["-A", CHAIN_LOG, "-j", "CONNMARK", "--restore-mark", "--mask", _MASK]
-    )
+    cmds.append(_base(ipt) + ["-A", CHAIN_LOG, "-j", "CONNMARK", "--restore-mark", "--mask", _MASK])
     cmds.append(
         _base(ipt)
         + [
@@ -144,7 +138,7 @@ def build_setup(
     return cmds
 
 
-def build_teardown(ipt: str = "iptables") -> List[List[str]]:
+def build_teardown(ipt: str = "iptables") -> list[list[str]]:
     """Build the argv lists that remove exactly what :func:`build_setup` created.
 
     Designed so repeated or partial application is harmless: the caller runs
@@ -161,7 +155,7 @@ def build_teardown(ipt: str = "iptables") -> List[List[str]]:
     :param ipt: ``"iptables"`` or ``"ip6tables"``.
     :returns: ordered list of argv lists to run in sequence.
     """
-    cmds: List[List[str]] = []
+    cmds: list[list[str]] = []
 
     # Delete the jumps before deleting their target chains. Emit the OUTPUT
     # deletes twice to clear duplicates left by a previous re-run.
@@ -181,7 +175,7 @@ def build_teardown(ipt: str = "iptables") -> List[List[str]]:
     return cmds
 
 
-def build_probe(group: int = 1, ipt: str = "iptables") -> Dict[str, List[List[str]]]:
+def build_probe(group: int = 1, ipt: str = "iptables") -> dict[str, list[list[str]]]:
     """Build argv lists that probe whether the needed netfilter features exist.
 
     Each ``"setup"`` command appends one rule per probed feature into a throwaway
@@ -194,24 +188,16 @@ def build_probe(group: int = 1, ipt: str = "iptables") -> Dict[str, List[List[st
     :param ipt: ``"iptables"`` or ``"ip6tables"``.
     :returns: dict with ``"setup"`` and ``"teardown"`` argv-list lists.
     """
-    setup: List[List[str]] = []
+    setup: list[list[str]] = []
     setup.append(_base(ipt) + ["-N", CHAIN_PROBE])
     # owner match available?
-    setup.append(
-        _base(ipt)
-        + ["-A", CHAIN_PROBE, "-m", "owner", "--uid-owner", "10000", "-j", "RETURN"]
-    )
+    setup.append(_base(ipt) + ["-A", CHAIN_PROBE, "-m", "owner", "--uid-owner", "10000", "-j", "RETURN"])
     # CONNMARK target available?
-    setup.append(
-        _base(ipt)
-        + ["-A", CHAIN_PROBE, "-j", "CONNMARK", "--set-xmark", _XMARK, "-j", "RETURN"]
-    )
+    setup.append(_base(ipt) + ["-A", CHAIN_PROBE, "-j", "CONNMARK", "--set-xmark", _XMARK, "-j", "RETURN"])
     # NFLOG target available?
-    setup.append(
-        _base(ipt) + ["-A", CHAIN_PROBE, "-j", "NFLOG", "--nflog-group", str(group)]
-    )
+    setup.append(_base(ipt) + ["-A", CHAIN_PROBE, "-j", "NFLOG", "--nflog-group", str(group)])
 
-    teardown: List[List[str]] = []
+    teardown: list[list[str]] = []
     teardown.append(_base(ipt) + ["-F", CHAIN_PROBE])
     teardown.append(_base(ipt) + ["-X", CHAIN_PROBE])
 

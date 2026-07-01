@@ -27,10 +27,12 @@ TCP_FIXTURE = """\
    2: 0100007F:1234 09090909:0050 01 00000000:00000000 00:00000000 00000000  1051        0 54323 1 ffff
 """
 
+# Middle/trailing columns compacted to keep source lines <120 chars; the parser
+# only reads fields[1]=local, fields[2]=rem, fields[7]=uid (uid kept at index 7).
 TCP6_FIXTURE = """\
-  sl  local_address                         remote_address                        st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
-   0: 00000000000000000000000000000000:1F90 00000000000000000000000000000000:0000 0A 00000000:00000000 00:00000000 00000000 10123        0 60001 1 ffff
-   1: 00000000000000000000000001000000:9C40 60480120000060480000000088880000:01BB 01 00000000:00000000 00:00000000 00000000 10123        0 60002 1 ffff
+  sl  local_address rem_address st tx rx tr retr uid
+   0: 00000000000000000000000000000000:1F90 00000000000000000000000000000000:0000 0A 0:0 0:0 0 10123
+   1: 00000000000000000000000001000000:9C40 60480120000060480000000088880000:01BB 01 0:0 0:0 0 10123
 """
 
 UDP_FIXTURE = """\
@@ -40,8 +42,8 @@ UDP_FIXTURE = """\
 """
 
 UDP6_FIXTURE = """\
-  sl  local_address                         remote_address                        st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
-   0: 00000000000000000000000001000000:14E9 00000000000000000000000000000000:0000 07 00000000:00000000 00:00000000 00000000 10123        0 80001 2 ffff 0
+  sl  local_address rem_address st tx rx tr retr uid
+   0: 00000000000000000000000001000000:14E9 00000000000000000000000000000000:0000 07 0:0 0:0 0 10123
 """
 
 

@@ -34,11 +34,7 @@ def test_build_setup_creates_both_chains():
 def test_build_setup_owner_rule_for_uid_with_connmark():
     cmds = build_setup([10123], 30)
     joined = _joined(cmds)
-    owner = [
-        c
-        for c in joined
-        if "-A APPTAP_MARK" in c and "--uid-owner 10123" in c
-    ]
+    owner = [c for c in joined if "-A APPTAP_MARK" in c and "--uid-owner 10123" in c]
     assert len(owner) == 1
     assert "-m owner" in owner[0]
     assert f"CONNMARK --set-xmark {XMARK}" in owner[0]
@@ -47,10 +43,7 @@ def test_build_setup_owner_rule_for_uid_with_connmark():
 def test_build_setup_log_chain_restore_and_nflog():
     cmds = build_setup([10123], 30)
     joined = _joined(cmds)
-    assert any(
-        "-A APPTAP_LOG" in c and "CONNMARK --restore-mark --mask 0x40000" in c
-        for c in joined
-    )
+    assert any("-A APPTAP_LOG" in c and "CONNMARK --restore-mark --mask 0x40000" in c for c in joined)
     nflog = [c for c in joined if "-A APPTAP_LOG" in c and "NFLOG" in c]
     assert len(nflog) == 1
     assert "--nflog-group 30" in nflog[0]

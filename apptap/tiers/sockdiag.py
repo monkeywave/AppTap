@@ -11,9 +11,8 @@ it is the fallback that always works on any rooted target.
 
 from __future__ import annotations
 
-import os
+import contextlib
 import threading
-from typing import List, Optional, Set, Tuple
 
 from apptap.executors.base import BackgroundProc
 from apptap.result import CaptureResult, Connection
@@ -28,7 +27,7 @@ _SNAPSHOT_INTERVAL = 1.0
 _WILDCARD_ADDRS = frozenset({"0.0.0.0", "::", ""})
 
 
-def connection_endpoints(conns: Set[Connection]) -> Set[Tuple[str, int]]:
+def connection_endpoints(conns: set[Connection]) -> set[tuple[str, int]]:
     """Collect every concrete ``(addr, port)`` endpoint from ``conns``.
 
     Both the local and remote endpoint of each connection are included so a
@@ -36,7 +35,7 @@ def connection_endpoints(conns: Set[Connection]) -> Set[Tuple[str, int]]:
     addresses (``0.0.0.0``/``::``/empty) and port ``0`` are skipped because they
     identify no specific peer and would over-match.
     """
-    endpoints: Set[Tuple[str, int]] = set()
+    endpoints: set[tuple[str, int]] = set()
     for conn in conns:
         for addr, port in ((conn.laddr, conn.lport), (conn.raddr, conn.rport)):
             if addr in _WILDCARD_ADDRS or port == 0:
@@ -46,9 +45,9 @@ def connection_endpoints(conns: Set[Connection]) -> Set[Tuple[str, int]]:
 
 
 def packet_matches(
-    endpoints: Set[Tuple[str, int]],
-    src_ep: Tuple[str, int],
-    dst_ep: Tuple[str, int],
+    endpoints: set[tuple[str, int]],
+    src_ep: tuple[str, int],
+    dst_ep: tuple[str, int],
 ) -> bool:
     """Return True if either packet endpoint is one of the app's endpoints."""
     return src_ep in endpoints or dst_ep in endpoints
@@ -63,12 +62,12 @@ class SockDiagTier(CaptureTier):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._proc: Optional[BackgroundProc] = None
-        self._conns: Set[Connection] = set()
+        self._proc: BackgroundProc | None = None
+        self._conns: set[Connection] = set()
         self._stop_event = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._tmp_pcap = self._host_tmp_pcap(self.output)
-        self._remote_pcap: Optional[str] = None
+        self._remote_pcap: str | None = None
 
     # --- lifecycle -----------------------------------------------------------
 
@@ -111,9 +110,7 @@ class SockDiagTier(CaptureTier):
     def _start_snapshot_thread(self) -> None:
         """Spawn the daemon thread that keeps unioning the app's connections."""
         self._stop_event.clear()
-        self._thread = threading.Thread(
-            target=self._snapshot_loop, name="apptap-sockdiag-snapshot", daemon=True
-        )
+        self._thread = threading.Thread(target=self._snapshot_loop, name="apptap-sockdiag-snapshot", daemon=True)
         self._thread.start()
 
     def _snapshot_loop(self) -> None:
@@ -123,10 +120,8 @@ class SockDiagTier(CaptureTier):
         must not kill the thread, so every iteration is guarded.
         """
         while not self._stop_event.is_set():
-            try:
+            with contextlib.suppress(Exception):
                 self._conns |= connections_for_uids(self.executor, self.uids)
-            except Exception:
-                pass
             self._stop_event.wait(_SNAPSHOT_INTERVAL)
 
     # --- stop internals ------------------------------------------------------
@@ -140,8 +135,8 @@ class SockDiagTier(CaptureTier):
 
     def _finalize(self) -> CaptureResult:
         """Filter the temp pcap to the app's connections and build the result."""
-        warnings: List[str] = []
-        pcap_path: Optional[str] = self.output
+        warnings: list[str] = []
+        pcap_path: str | None = self.output
         try:
             self._filter_pcap()
         except Exception as exc:  # pragma: no cover - exercised via warnings path
