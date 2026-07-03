@@ -143,7 +143,10 @@ def test_forced_sockdiag(tmp_path, monkeypatch):
     assert r.tier == Tier.SOCKDIAG
 
 
-def test_version_note_surfaced(tmp_path, monkeypatch):
+def test_version_note_surfaced_when_falling_back_to_sockdiag(tmp_path, monkeypatch):
+    # The SDK note claims Tier 2 is unavailable and Tier 1 is used, so it must
+    # only surface when the sockdiag fallback is actually chosen.
+    monkeypatch.setattr(api.capabilities, "select_tier", lambda caps, req: (Tier.SOCKDIAG, []))
     monkeypatch.setattr(api.capabilities, "get_android_sdk", lambda ex: 34)
     monkeypatch.setattr(api.capabilities, "android_version_note", lambda sdk: "note!" if sdk >= 31 else None)
     out = str(tmp_path / "app.pcap")
@@ -151,6 +154,19 @@ def test_version_note_surfaced(tmp_path, monkeypatch):
     sess.start()
     r = sess.stop()
     assert "note!" in r.warnings
+
+
+def test_version_note_suppressed_when_nflog_chosen(tmp_path, monkeypatch):
+    # When Tier 2 (NFLOG) is actually selected, the "Tier 2 unavailable" note
+    # would contradict reality and must not be surfaced. (select_tier -> NFLOG
+    # via the autouse stub.)
+    monkeypatch.setattr(api.capabilities, "get_android_sdk", lambda ex: 34)
+    monkeypatch.setattr(api.capabilities, "android_version_note", lambda sdk: "note!" if sdk >= 31 else None)
+    out = str(tmp_path / "app.pcap")
+    sess = api.CaptureSession(Target(package="com.x"), FakeExecutor(), out)
+    sess.start()
+    r = sess.stop()
+    assert "note!" not in r.warnings
 
 
 def test_cleanup_invokes_teardown(monkeypatch):

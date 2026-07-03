@@ -80,9 +80,14 @@ class CaptureSession:
             raise RuntimeError("CaptureSession already started")
         ex = self.executor
 
-        self._note_android_version(ex)
         self._uids = self._resolve_uids(ex)
         chosen = self._choose_tier(ex)
+        # The Android SDK note claims Tier 2 is unavailable and Tier 1 will be
+        # used, so only surface it when that is actually what happened. On newer
+        # devices where nfnetlink_log is present, Tier 2 is chosen and the note
+        # would contradict the real decision.
+        if chosen != Tier.NFLOG:
+            self._note_android_version(ex)
         tcpdump_cmd = TcpdumpProvider(ex, override_path=self.tcpdump_path).resolve()
 
         impl_cls = NflogTier if chosen == Tier.NFLOG else SockDiagTier

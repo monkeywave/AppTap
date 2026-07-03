@@ -44,6 +44,7 @@ from .constants import (
     CONNMARK_BIT,
     CONNMARK_MASK,
     NETFILTER_TABLE,
+    NFLOG_COPY_SIZE,
 )
 
 # iptables/ip6tables share an identical argv grammar, so every builder takes the
@@ -123,7 +124,7 @@ def build_setup(uids: list[int], group: int, ipt: str = "iptables") -> list[list
             "--nflog-group",
             str(group),
             "--nflog-size",
-            "0",
+            str(NFLOG_COPY_SIZE),
             "--nflog-threshold",
             "1",
         ]
@@ -192,8 +193,11 @@ def build_probe(group: int = 1, ipt: str = "iptables") -> dict[str, list[list[st
     setup.append(_base(ipt) + ["-N", CHAIN_PROBE])
     # owner match available?
     setup.append(_base(ipt) + ["-A", CHAIN_PROBE, "-m", "owner", "--uid-owner", "10000", "-j", "RETURN"])
-    # CONNMARK target available?
-    setup.append(_base(ipt) + ["-A", CHAIN_PROBE, "-j", "CONNMARK", "--set-xmark", _XMARK, "-j", "RETURN"])
+    # CONNMARK target available? (A rule carries exactly one jump target; the
+    # CONNMARK target *is* that target, so there is no trailing "-j RETURN" here —
+    # iptables rejects two "-j" options with "multiple --jump options not allowed",
+    # which would make this a false negative and needlessly disable Tier 2.)
+    setup.append(_base(ipt) + ["-A", CHAIN_PROBE, "-j", "CONNMARK", "--set-xmark", _XMARK])
     # NFLOG target available?
     setup.append(_base(ipt) + ["-A", CHAIN_PROBE, "-j", "NFLOG", "--nflog-group", str(group)])
 

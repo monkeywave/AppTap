@@ -25,6 +25,14 @@ CHAIN_PROBE = "APPTAP_PROBE"
 #: default NFLOG group used for the in-kernel pre-filtered capture.
 DEFAULT_NFLOG_GROUP = 30
 
+#: bytes of each matched packet the kernel copies to userspace over NFLOG.
+#: This is a copy *length*, not a "0 == whole packet" range: with the xt_NFLOG
+#: F_COPY_LEN flag (which `--nflog-size` sets), a value of 0 makes the kernel
+#: strip the payload and deliver header-only records, so the pcap is unusable
+#: for traffic analysis. 65535 copies the full packet for any normal MTU while
+#: staying safe on every kernel (packets never exceed it).
+NFLOG_COPY_SIZE = 65535
+
 #: netfilter table the rules live in.
 NETFILTER_TABLE = "mangle"
 

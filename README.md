@@ -10,7 +10,7 @@
 
 
 # AppTap
-![version](https://img.shields.io/badge/version-0.2.0-blue) [![PyPI version](https://badge.fury.io/py/apptap.svg)](https://badge.fury.io/py/apptap) [![Publish status](https://github.com/monkeywave/AppTap/actions/workflows/publish.yml/badge.svg?branch=main)](https://github.com/monkeywave/AppTap/actions/workflows/publish.yml)
+![version](https://img.shields.io/badge/version-0.3.0-blue) [![PyPI version](https://badge.fury.io/py/apptap.svg)](https://badge.fury.io/py/apptap) [![Publish status](https://github.com/monkeywave/AppTap/actions/workflows/publish.yml/badge.svg?branch=main)](https://github.com/monkeywave/AppTap/actions/workflows/publish.yml)
 [![Lint](https://github.com/monkeywave/AppTap/actions/workflows/lint.yml/badge.svg)](https://github.com/monkeywave/AppTap/actions/workflows/lint.yml)
 
 Capture **only one application's** network traffic, scoped by its **Linux UID**, using the kernel's

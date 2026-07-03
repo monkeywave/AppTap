@@ -47,7 +47,8 @@ def test_build_setup_log_chain_restore_and_nflog():
     nflog = [c for c in joined if "-A APPTAP_LOG" in c and "NFLOG" in c]
     assert len(nflog) == 1
     assert "--nflog-group 30" in nflog[0]
-    assert "--nflog-size 0" in nflog[0]
+    # Copy the full packet, not 0 bytes (0 strips the payload -> header-only pcap).
+    assert "--nflog-size 65535" in nflog[0]
     assert "--nflog-threshold 1" in nflog[0]
 
 
@@ -138,6 +139,24 @@ def test_build_probe_setup_and_teardown():
     assert any("NFLOG --nflog-group 1" in c for c in setup)
     assert any(c.endswith("-F APPTAP_PROBE") for c in teardown)
     assert any(c.endswith("-X APPTAP_PROBE") for c in teardown)
+
+
+def test_build_probe_each_rule_has_at_most_one_jump():
+    """No probe rule may carry two '-j' options.
+
+    iptables rejects two jump targets in one rule ("multiple --jump options not
+    allowed"), which would make the affected feature a false negative and wrongly
+    disable Tier 2. Regression guard for the CONNMARK probe rule specifically.
+    """
+    for argv in build_probe(group=1)["setup"]:
+        assert argv.count("-j") <= 1, f"probe rule has multiple -j: {' '.join(argv)}"
+
+
+def test_build_probe_connmark_rule_is_valid_single_target():
+    """The CONNMARK probe rule ends at the CONNMARK target — no trailing RETURN."""
+    connmark = [c for c in _joined(build_probe(group=1)["setup"]) if "CONNMARK" in c]
+    assert len(connmark) == 1
+    assert connmark[0].endswith(f"CONNMARK --set-xmark {XMARK}")
 
 
 # --- parse_iptables_backend --------------------------------------------------
